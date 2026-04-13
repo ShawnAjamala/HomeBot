@@ -1,0 +1,191 @@
+/* Global Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* Form Styles (Login, Register) */
+form {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  margin: 50px auto;
+  animation: fadeIn 0.5s ease;
+}
+
+form h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 16px;
+  transition: border 0.3s;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Dashboard Common Styles */
+.dashboard {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard h1 {
+  color: #333;
+  border-bottom: 3px solid #667eea;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+
+.dashboard h2 {
+  color: #555;
+  margin: 20px 0 10px;
+}
+
+.logout-btn {
+  background: #dc3545;
+  width: auto;
+  padding: 8px 20px;
+  margin-bottom: 20px;
+}
+
+.logout-btn:hover {
+  background: #c82333;
+}
+
+/* Course Form */
+.course-form {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.course-form input {
+  margin: 5px 0;
+}
+
+/* Course List */
+.course-list {
+  list-style: none;
+  margin-top: 20px;
+}
+
+.course-list li {
+  background: #f8f9fa;
+  margin: 10px 0;
+  padding: 15px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.2s;
+}
+
+.course-list li:hover {
+  transform: translateX(5px);
+  background: #e9ecef;
+}
+
+.course-info {
+  flex: 1;
+}
+
+.course-info strong {
+  color: #333;
+  font-size: 18px;
+}
+
+.course-info p {
+  color: #666;
+  margin-top: 5px;
+}
+
+.course-actions button {
+  width: auto;
+  padding: 6px 12px;
+  margin-left: 10px;
+  font-size: 14px;
+}
+
+.edit-btn {
+  background: #ffc107;
+  color: #333;
+}
+
+.edit-btn:hover {
+  background: #e0a800;
+}
+
+.delete-btn {
+  background: #dc3545;
+}
+
+.delete-btn:hover {
+  background: #c82333;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading */
+.loading {
+  text-align: center;
+  color: white;
+  font-size: 24px;
+  margin-top: 50px;
+}
