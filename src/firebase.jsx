@@ -15,6 +15,8 @@ import {
   doc,
   setDoc,
   getDoc,
+  query,
+  where,
 } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -31,8 +33,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Export auth instance (used by React context or components)
-export { auth };
+// Export everything needed
+export { auth, db };
 
 // Auth helpers
 export const registerUser = (email, password) =>
@@ -53,7 +55,7 @@ export const getUserRole = async (userId) => {
   return userDoc.exists() ? userDoc.data().role : null;
 };
 
-// Course CRUD (keep for later if needed)
+// Course CRUD (if needed)
 export const addCourse = (course) => addDoc(coursesCollection, course);
 export const getCourses = async () => {
   const snapshot = await getDocs(coursesCollection);

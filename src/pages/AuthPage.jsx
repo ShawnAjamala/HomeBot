@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { registerUser, loginUser } from "../firebase";
+import { registerUser, loginUser, db } from "../firebase";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Home, Mail, Lock, UserPlus, LogIn, User } from "lucide-react";
 
 export default function AuthPage() {
@@ -20,26 +21,42 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        await loginUser(email, password);
+        const userCred = await loginUser(email, password);
+        const userDoc = await getDoc(doc(db, "users", userCred.user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          localStorage.setItem("userName", data.name);
+          localStorage.setItem("userRole", data.role);
+        } else {
+          localStorage.setItem("userName", email.split("@")[0]);
+          localStorage.setItem("userRole", "buyer");
+        }
         navigate("/dashboard");
       } else {
         const userCred = await registerUser(email, password);
-        // Instant save to localStorage – no waiting for Firestore
+        await setDoc(doc(db, "users", userCred.user.uid), {
+          name,
+          email,
+          role,
+          approved: role === "agent" ? false : true,
+          createdAt: new Date().toISOString(),
+          description: "",
+          avatar: "",
+        });
         localStorage.setItem("userName", name);
         localStorage.setItem("userRole", role);
-        // Optional Firestore write (does not block navigation)
-        try {
-          const { setUserRole } = await import("../firebase");
-          await setUserRole(userCred.user.uid, role);
-        } catch (err) {}
         navigate("/dashboard");
       }
     } catch (err) {
       let message = err.message;
-      if (message.includes("auth/email-already-in-use")) message = "Email already in use";
-      else if (message.includes("auth/invalid-email")) message = "Invalid email address";
-      else if (message.includes("auth/wrong-password")) message = "Wrong password";
-      else if (message.includes("auth/user-not-found")) message = "No account found with this email";
+      if (message.includes("auth/email-already-in-use"))
+        message = "Email already in use";
+      else if (message.includes("auth/invalid-email"))
+        message = "Invalid email address";
+      else if (message.includes("auth/wrong-password"))
+        message = "Wrong password";
+      else if (message.includes("auth/user-not-found"))
+        message = "No account found with this email";
       setError(message);
     } finally {
       setSubmitting(false);
@@ -53,8 +70,12 @@ export default function AuthPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 border border-green-200 mb-4">
             <Home className="text-green-700" size={32} />
           </div>
-          <h1 className="text-4xl font-bold text-green-900 tracking-tight">HomeBot</h1>
-          <p className="text-green-600 mt-2 text-sm">Your AI real estate assistant</p>
+          <h1 className="text-4xl font-bold text-green-900 tracking-tight">
+            HomeBot
+          </h1>
+          <p className="text-green-600 mt-2 text-sm">
+            Your AI real estate assistant
+          </p>
         </div>
 
         <div className="flex gap-3 mb-8 bg-green-100 rounded-full p-1">
@@ -83,7 +104,10 @@ export default function AuthPage() {
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isLogin && (
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500" size={18} />
+              <User
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500"
+                size={18}
+              />
               <input
                 type="text"
                 placeholder="Full name"
@@ -95,7 +119,10 @@ export default function AuthPage() {
             </div>
           )}
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500" size={18} />
+            <Mail
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500"
+              size={18}
+            />
             <input
               type="email"
               placeholder="Email address"
@@ -106,7 +133,10 @@ export default function AuthPage() {
             />
           </div>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500" size={18} />
+            <Lock
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-green-500"
+              size={18}
+            />
             <input
               type="password"
               placeholder="Password"
@@ -129,20 +159,37 @@ export default function AuthPage() {
             </select>
           )}
 
-          {error && <div className="bg-red-100 border border-red-300 text-red-700 text-sm p-3 rounded-xl">{error}</div>}
+          {error && (
+            <div className="bg-red-100 border border-red-300 text-red-700 text-sm p-3 rounded-xl">
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={submitting}
             className="w-full bg-green-700 hover:bg-green-800 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2"
           >
-            {submitting ? "Please wait..." : isLogin ? <><LogIn size={18} /> Login</> : <><UserPlus size={18} /> Create account</>}
+            {submitting ? (
+              "Please wait..."
+            ) : isLogin ? (
+              <>
+                <LogIn size={18} /> Login
+              </>
+            ) : (
+              <>
+                <UserPlus size={18} /> Create account
+              </>
+            )}
           </button>
         </form>
 
         <div className="mt-6 text-center text-green-600 text-sm">
           {isLogin ? "No account? " : "Already have an account? "}
-          <button onClick={() => setIsLogin(!isLogin)} className="text-green-800 underline">
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-green-800 underline"
+          >
             {isLogin ? "Sign up" : "Login"}
           </button>
         </div>

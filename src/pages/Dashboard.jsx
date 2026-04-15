@@ -4,28 +4,30 @@ import AgentDashboard from "./AgentDashboard";
 import AdminDashboard from "./AdminDashboard";
 
 export default function Dashboard({ user, userName, role }) {
+  // If role is null or undefined, default to buyer (should not happen if localStorage has role)
+  const effectiveRole = role || "buyer";
+  const displayName = userName || user?.email?.split("@")[0] || "User";
+
   const renderDashboard = () => {
-    switch (role) {
+    switch (effectiveRole) {
       case "admin":
-        return <AdminDashboard />;
+        return <AdminDashboard user={user} />;
       case "agent":
-        return <AgentDashboard />;
+        return <AgentDashboard user={user} />;
       default:
-        return <BuyerDashboard />;
+        return <BuyerDashboard user={user} />;
     }
   };
 
-  const displayName = userName || (user?.email ? user.email.split('@')[0] : "User");
-
   return (
     <div>
-      <Navbar role={role} />
+      <Navbar role={effectiveRole} />
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-green-900">Welcome, {displayName}</h1>
-        <p className="text-green-600 mt-2">You are logged in as <span className="font-semibold capitalize">{role}</span></p>
-        <div className="mt-8">
-          {renderDashboard()}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-green-900">Welcome, {displayName}</h1>
+          <p className="text-green-600 mt-2">Logged in as <span className="font-semibold capitalize">{effectiveRole}</span></p>
         </div>
+        {renderDashboard()}
       </div>
     </div>
   );

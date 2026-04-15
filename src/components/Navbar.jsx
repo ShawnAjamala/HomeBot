@@ -1,17 +1,19 @@
 import { useNavigate } from "react-router-dom";
 import { logoutUser } from "../firebase";
-import { Home, Search, Heart, PlusCircle, Users, Settings, LogOut } from "lucide-react";
+import { Home, Search, Heart, PlusCircle, Users, Settings, LogOut, UserCircle } from "lucide-react";
 
 export default function Navbar({ role }) {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logoutUser();
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userRole");
+    localStorage.removeItem("userAvatar");
     navigate("/auth");
   };
 
   const commonLinks = [{ to: "/dashboard", label: "Dashboard", icon: Home }];
-
   const roleLinks = {
     buyer: [
       { to: "/search", label: "Search", icon: Search },
@@ -26,7 +28,6 @@ export default function Navbar({ role }) {
       { to: "/manage-properties", label: "Properties", icon: Settings },
     ],
   };
-
   const links = [...commonLinks, ...(roleLinks[role] || roleLinks.buyer)];
 
   return (
@@ -39,19 +40,23 @@ export default function Navbar({ role }) {
           </div>
           <div className="hidden md:flex items-center space-x-4">
             {links.map((link) => (
-              <a
+              <button
                 key={link.label}
-                href={link.to}
+                onClick={() => navigate(link.to)}
                 className="flex items-center gap-1 px-3 py-2 rounded-md text-green-700 hover:bg-green-50 transition"
               >
                 <link.icon size={18} />
                 <span>{link.label}</span>
-              </a>
+              </button>
             ))}
             <button
-              onClick={handleLogout}
-              className="ml-4 px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 flex items-center gap-2"
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-1 px-3 py-2 rounded-md text-green-700 hover:bg-green-50 transition"
             >
+              <UserCircle size={18} />
+              <span>Profile</span>
+            </button>
+            <button onClick={handleLogout} className="ml-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2">
               <LogOut size={18} /> Logout
             </button>
           </div>
