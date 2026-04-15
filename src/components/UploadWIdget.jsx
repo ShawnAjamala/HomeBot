@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 
-const UploadWidget = ({ cloudName, uploadPreset, onUpload, buttonText = "Upload Image" }) => {
+const UploadWidget = ({ cloudName, uploadPreset, onUpload, buttonText = "Upload Image", multiple = false }) => {
   const widgetRef = useRef(null);
 
   useEffect(() => {
@@ -13,6 +13,11 @@ const UploadWidget = ({ cloudName, uploadPreset, onUpload, buttonText = "Upload 
   }, []);
 
   const openWidget = () => {
+    if (!window.cloudinary) {
+      alert("Upload widget not loaded. Please refresh the page.");
+      return;
+    }
+
     if (widgetRef.current) {
       widgetRef.current.open();
       return;
@@ -22,12 +27,17 @@ const UploadWidget = ({ cloudName, uploadPreset, onUpload, buttonText = "Upload 
       {
         cloudName: cloudName,
         uploadPreset: uploadPreset,
-        multiple: false,
-        cropping: true,
+        multiple: multiple,
+        cropping: !multiple, // only crop single images
         croppingAspectRatio: 1,
+        showAdvancedOptions: false,
       },
       (error, result) => {
-        if (!error && result && result.event === 'success') {
+        if (error) {
+          console.error("Upload error:", error);
+          return;
+        }
+        if (result && result.event === 'success') {
           onUpload(result.info.secure_url);
         }
       }
@@ -38,7 +48,8 @@ const UploadWidget = ({ cloudName, uploadPreset, onUpload, buttonText = "Upload 
   return (
     <button
       onClick={openWidget}
-      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+      type="button"
+      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
     >
       {buttonText}
     </button>
