@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { NotificationProvider } from "./components/NotificationManager";
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
@@ -13,7 +14,7 @@ import MyListings from "./pages/MyListings";
 import PurchaseHistory from "./pages/PurchaseHistory";
 import FinanceHistory from "./pages/FinanceHistory";
 import AdminFinance from "./pages/AdminFinance";
-import Footer from "./components/Footer"; // Import Footer
+import Footer from "./components/Footer";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -54,93 +55,29 @@ function App() {
   if (!authChecked) return null;
 
   return (
-    <BrowserRouter>
-      <div className="flex flex-col min-h-screen">
-        <div className="flex-grow">
-          <Routes>
-            <Route path="/auth" element={<AuthPage />} />
-            <Route
-              path="/dashboard"
-              element={
-                user ? (
-                  <Dashboard user={user} userName={userName} role={role} />
-                ) : (
-                  <Navigate to="/auth" />
-                )
-              }
-            />
-            <Route
-              path="/profile"
-              element={user ? <Profile /> : <Navigate to="/auth" />}
-            />
-            <Route
-              path="/manage-users"
-              element={
-                user && role === "admin" ? (
-                  <ManageUsers />
-                ) : (
-                  <Navigate to="/dashboard" />
-                )
-              }
-            />
-            <Route
-              path="/manage-properties"
-              element={
-                user && role === "admin" ? (
-                  <ManageProperties />
-                ) : (
-                  <Navigate to="/dashboard" />
-                )
-              }
-            />
-            <Route
-              path="/admin-finance"
-              element={
-                user && role === "admin" ? (
-                  <AdminFinance />
-                ) : (
-                  <Navigate to="/dashboard" />
-                )
-              }
-            />
-            <Route
-              path="/search"
-              element={user ? <Search /> : <Navigate to="/auth" />}
-            />
-            <Route
-              path="/favorites"
-              element={user ? <Favorites /> : <Navigate to="/auth" />}
-            />
-
-            <Route
-              path="/purchase-history"
-              element={
-                user && role === "buyer" ? (
-                  <PurchaseHistory />
-                ) : (
-                  <Navigate to="/dashboard" />
-                )
-              }
-            />
-            <Route
-              path="/finance-history"
-              element={
-                user && role === "agent" ? (
-                  <FinanceHistory />
-                ) : (
-                  <Navigate to="/dashboard" />
-                )
-              }
-            />
-
-<Route path="/my-listings" element={user && role === "agent" ? <MyListings /> : <Navigate to="/dashboard" />} />
-
-            <Route path="*" element={<Navigate to="/dashboard" />} />
-          </Routes>
+    <NotificationProvider>
+      <BrowserRouter>
+        <div className="flex flex-col min-h-screen">
+          <div className="flex-grow">
+            <Routes>
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/dashboard" element={user ? <Dashboard user={user} userName={userName} role={role} /> : <Navigate to="/auth" />} />
+              <Route path="/profile" element={user ? <Profile /> : <Navigate to="/auth" />} />
+              <Route path="/manage-users" element={user && role === "admin" ? <ManageUsers /> : <Navigate to="/dashboard" />} />
+              <Route path="/manage-properties" element={user && role === "admin" ? <ManageProperties /> : <Navigate to="/dashboard" />} />
+              <Route path="/admin-finance" element={user && role === "admin" ? <AdminFinance /> : <Navigate to="/dashboard" />} />
+              <Route path="/search" element={user ? <Search /> : <Navigate to="/auth" />} />
+              <Route path="/favorites" element={user ? <Favorites /> : <Navigate to="/auth" />} />
+              <Route path="/my-listings" element={user && role === "agent" ? <MyListings /> : <Navigate to="/dashboard" />} />
+              <Route path="/purchase-history" element={user && role === "buyer" ? <PurchaseHistory /> : <Navigate to="/dashboard" />} />
+              <Route path="/finance-history" element={user && role === "agent" ? <FinanceHistory /> : <Navigate to="/dashboard" />} />
+              <Route path="*" element={<Navigate to="/dashboard" />} />
+            </Routes>
+          </div>
+          <Footer />
         </div>
-        <Footer />
-      </div>
-    </BrowserRouter>
+      </BrowserRouter>
+    </NotificationProvider>
   );
 }
 

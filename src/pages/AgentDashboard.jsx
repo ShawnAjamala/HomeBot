@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { auth, db } from "../firebase";
-import { collection, getDocs, query, where, getDoc, doc } from "firebase/firestore";
+import { collection, getDocs, query, where, getDoc, doc, deleteDoc } from "firebase/firestore";
 import { Home, DollarSign, CheckCircle, Clock, PlusCircle, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useConfirm, useToast } from "../components/NotificationManager";
 
 export default function AgentDashboard() {
   const [stats, setStats] = useState({
@@ -15,6 +16,8 @@ export default function AgentDashboard() {
   const [agentApproved, setAgentApproved] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const confirm = useConfirm();
+  const toast = useToast();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -58,6 +61,16 @@ export default function AgentDashboard() {
 
     fetchDashboardData();
   }, []);
+
+  // Example: if you have a delete listing button on this dashboard (though usually done in MyListings)
+  // But we'll add a placeholder for consistency – not required but shows usage.
+  const deleteSampleListing = (id) => {
+    confirm("Delete Listing", "Are you sure you want to delete this property?", async () => {
+      await deleteDoc(doc(db, "houses", id));
+      toast("Listing deleted successfully");
+      // refresh stats or navigate
+    });
+  };
 
   if (!agentApproved && !loading) {
     return (
