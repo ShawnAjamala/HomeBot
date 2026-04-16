@@ -1,4 +1,4 @@
- import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -10,6 +10,10 @@ import ManageProperties from "./pages/ManageProperties";
 import Search from "./pages/Search";
 import Favorites from "./pages/Favorites";
 
+import PurchaseHistory from "./pages/PurchaseHistory";
+import FinanceHistory from "./pages/FinanceHistory";
+import AdminFinance from "./pages/AdminFinance";
+import Footer from "./components/Footer"; // Import Footer
 
 function App() {
   const [user, setUser] = useState(null);
@@ -41,7 +45,6 @@ function App() {
         setRole(null);
         localStorage.removeItem("userName");
         localStorage.removeItem("userRole");
-        localStorage.removeItem("userAvatar");
       }
       setAuthChecked(true);
     });
@@ -52,17 +55,88 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/dashboard" element={user ? <Dashboard user={user} userName={userName} role={role} /> : <Navigate to="/auth" />} />
-        <Route path="/profile" element={user ? <Profile /> : <Navigate to="/auth" />} />
-        <Route path="/manage-users" element={user && role === "admin" ? <ManageUsers /> : <Navigate to="/dashboard" />} />
-        <Route path="/manage-properties" element={user && role === "admin" ? <ManageProperties /> : <Navigate to="/dashboard" />} />
-        <Route path="/search" element={user ? <Search /> : <Navigate to="/auth" />} />
-        <Route path="/favorites" element={user ? <Favorites /> : <Navigate to="/auth" />} />
-       
-        <Route path="*" element={<Navigate to="/dashboard" />} />
-      </Routes>
+      <div className="flex flex-col min-h-screen">
+        <div className="flex-grow">
+          <Routes>
+            <Route path="/auth" element={<AuthPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                user ? (
+                  <Dashboard user={user} userName={userName} role={role} />
+                ) : (
+                  <Navigate to="/auth" />
+                )
+              }
+            />
+            <Route
+              path="/profile"
+              element={user ? <Profile /> : <Navigate to="/auth" />}
+            />
+            <Route
+              path="/manage-users"
+              element={
+                user && role === "admin" ? (
+                  <ManageUsers />
+                ) : (
+                  <Navigate to="/dashboard" />
+                )
+              }
+            />
+            <Route
+              path="/manage-properties"
+              element={
+                user && role === "admin" ? (
+                  <ManageProperties />
+                ) : (
+                  <Navigate to="/dashboard" />
+                )
+              }
+            />
+            <Route
+              path="/admin-finance"
+              element={
+                user && role === "admin" ? (
+                  <AdminFinance />
+                ) : (
+                  <Navigate to="/dashboard" />
+                )
+              }
+            />
+            <Route
+              path="/search"
+              element={user ? <Search /> : <Navigate to="/auth" />}
+            />
+            <Route
+              path="/favorites"
+              element={user ? <Favorites /> : <Navigate to="/auth" />}
+            />
+
+            <Route
+              path="/purchase-history"
+              element={
+                user && role === "buyer" ? (
+                  <PurchaseHistory />
+                ) : (
+                  <Navigate to="/dashboard" />
+                )
+              }
+            />
+            <Route
+              path="/finance-history"
+              element={
+                user && role === "agent" ? (
+                  <FinanceHistory />
+                ) : (
+                  <Navigate to="/dashboard" />
+                )
+              }
+            />
+            <Route path="*" element={<Navigate to="/dashboard" />} />
+          </Routes>
+        </div>
+        <Footer />
+      </div>
     </BrowserRouter>
   );
 }

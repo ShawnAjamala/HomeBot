@@ -22,12 +22,22 @@ export default function PaymentModal({ house, onClose, onSuccess }) {
     try {
       const { db, auth } = await import("../firebase");
       const { addDoc, collection, updateDoc, doc } = await import("firebase/firestore");
+      
+      const adminProfit = house.price * 0.05;
+      const agentEarnings = house.price * 0.95;
+
       const transaction = {
         houseId: house.id,
+        houseAddress: house.address,
+        houseImage: house.images?.[0] || null, // store first image
         buyerId: auth.currentUser.uid,
         buyerName: localStorage.getItem("userName") || auth.currentUser.email,
         buyerPhone: buyerPhone,
         amount: house.price,
+        adminProfit: adminProfit,
+        agentEarnings: agentEarnings,
+        agentId: house.agentId,
+        agentName: house.agentName,
         status: "completed",
         createdAt: new Date().toISOString()
       };

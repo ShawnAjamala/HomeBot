@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { logoutUser } from "../firebase";
-import { Home, Search, Heart, PlusCircle, Users, Settings, LogOut, UserCircle } from "lucide-react";
+import { Home, Search, Heart, PlusCircle, Users, Settings, LogOut, UserCircle, DollarSign, History } from "lucide-react";
 
 export default function Navbar({ role }) {
   const navigate = useNavigate();
@@ -14,20 +14,24 @@ export default function Navbar({ role }) {
   };
 
   const commonLinks = [{ to: "/dashboard", label: "Dashboard", icon: Home }];
+
   const roleLinks = {
     buyer: [
       { to: "/search", label: "Search", icon: Search },
       { to: "/favorites", label: "Favorites", icon: Heart },
+      { to: "/purchase-history", label: "Purchases", icon: History },
     ],
     agent: [
       { to: "/my-listings", label: "My Listings", icon: PlusCircle },
-      { to: "/search", label: "Search", icon: Search },
+      { to: "/finance-history", label: "Finance", icon: DollarSign }, // replaces Search
     ],
     admin: [
       { to: "/manage-users", label: "Users", icon: Users },
       { to: "/manage-properties", label: "Properties", icon: Settings },
+      { to: "/admin-finance", label: "Finance", icon: DollarSign },
     ],
   };
+
   const links = [...commonLinks, ...(roleLinks[role] || roleLinks.buyer)];
 
   return (

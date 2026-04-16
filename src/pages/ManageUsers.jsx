@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebase";
 import { collection, getDocs, doc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
-import Navbar from "../components/Navbar";
 import { Check, Trash2 } from "lucide-react";
+import Navbar from "../components/Navbar";
 
 export default function ManageUsers() {
   const [users, setUsers] = useState([]);
@@ -48,16 +48,24 @@ export default function ManageUsers() {
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
               </thead>
-              <tbody>
+              <tbody className="bg-white divide-y divide-gray-200">
                 {users.map(u => (
                   <tr key={u.id}>
                     <td className="px-6 py-4">{u.name}</td>
                     <td className="px-6 py-4">{u.email}</td>
                     <td className="px-6 py-4 capitalize">{u.role}</td>
-                    <td>{u.role === "agent" ? (u.approved ? "Approved" : "Pending") : "N/A"}</td>
-                    <td className="flex gap-2">
+                    <td className="px-6 py-4">
+                      {u.role === "agent" ? (u.approved ? <span className="text-green-600">Approved</span> : <span className="text-yellow-600">Pending</span>) : <span className="text-gray-500">N/A</span>}
+                    </td>
+                    <td className="px-6 py-4 flex gap-2">
                       {u.role === "agent" && !u.approved && <button onClick={() => approveAgent(u.id)} className="text-green-600"><Check size={18} /></button>}
                       <button onClick={() => deleteUser(u.id)} className="text-red-600"><Trash2 size={18} /></button>
                     </td>
