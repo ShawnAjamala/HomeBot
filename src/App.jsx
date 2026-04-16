@@ -9,7 +9,7 @@ import ManageUsers from "./pages/ManageUsers";
 import ManageProperties from "./pages/ManageProperties";
 import Search from "./pages/Search";
 import Favorites from "./pages/Favorites";
-
+import MyListings from "./pages/MyListings";
 import PurchaseHistory from "./pages/PurchaseHistory";
 import FinanceHistory from "./pages/FinanceHistory";
 import AdminFinance from "./pages/AdminFinance";
@@ -132,6 +132,9 @@ function App() {
                 )
               }
             />
+
+<Route path="/my-listings" element={user && role === "agent" ? <MyListings /> : <Navigate to="/dashboard" />} />
+
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
         </div>

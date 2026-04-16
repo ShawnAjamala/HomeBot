@@ -1,30 +1,40 @@
 import { useState, useEffect } from "react";
-import { db, auth } from "../firebase";
+import { auth, db } from "../firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import PaymentModal from "../components/PaymentModal";
-import { Search, Heart, DollarSign } from "lucide-react";
+import { Search, Heart, Home, Star, ShoppingBag } from "lucide-react";
 
 export default function BuyerDashboard() {
   const [houses, setHouses] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [favorites, setFavorites] = useState([]);
   const [selectedHouse, setSelectedHouse] = useState(null);
+  const [purchasedCount, setPurchasedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchHouses = async () => {
+    const fetchData = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      // Fetch approved & unsold houses
       const q = query(collection(db, "houses"), where("approved", "==", true), where("sold", "==", false));
       const snapshot = await getDocs(q);
-      setHouses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const housesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setHouses(housesData);
 
-      const user = auth.currentUser;
-      if (user) {
-        const favs = JSON.parse(localStorage.getItem(`favorites_${user.uid}`) || "[]");
-        setFavorites(favs);
-      }
+      // Load favorites from localStorage
+      const favs = JSON.parse(localStorage.getItem(`favorites_${user.uid}`) || "[]");
+      setFavorites(favs);
+
+      // Count purchased properties
+      const purchasesQuery = query(collection(db, "transactions"), where("buyerId", "==", user.uid));
+      const purchasesSnap = await getDocs(purchasesQuery);
+      setPurchasedCount(purchasesSnap.size);
+
       setLoading(false);
     };
-    fetchHouses();
+    fetchData();
   }, []);
 
   const toggleFavorite = (houseId) => {
@@ -40,49 +50,115 @@ export default function BuyerDashboard() {
     localStorage.setItem(`favorites_${user.uid}`, JSON.stringify(newFavs));
   };
 
-  const filtered = houses.filter(h =>
+  const handlePaymentSuccess = () => {
+    setSelectedHouse(null);
+    // Remove the purchased house from the list
+    setHouses(prev => prev.filter(h => h.id !== selectedHouse?.id));
+    setPurchasedCount(prev => prev + 1);
+    alert("Payment successful! The house is now yours.");
+  };
+
+  const filteredHouses = houses.filter(h =>
     h.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     h.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handlePaymentSuccess = () => {
-    setSelectedHouse(null);
-    setHouses(prev => prev.filter(h => h.id !== selectedHouse?.id));
-    alert("Payment successful! The house is now yours.");
-  };
-
   if (loading) return <div>Loading properties...</div>;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-green-100">
-      <h2 className="text-2xl font-bold text-green-800 mb-4">Available Houses</h2>
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-        <input type="text" placeholder="Search by address..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg" />
+    <div className="space-y-8">
+      {/* Hero Section with Search */}
+      <div className="bg-gradient-to-r from-green-600 to-green-800 rounded-2xl p-8 text-white">
+        <h1 className="text-3xl font-bold mb-2">Find Your Dream Home</h1>
+        <p className="text-green-100 mb-6">Discover the perfect property from our curated listings</p>
+        <div className="relative max-w-xl">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search by address or description..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+        </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(house => (
-          <div key={house.id} className="border border-green-200 rounded-lg p-4 hover:shadow-md transition">
-            {house.images && house.images.length > 0 && (
-              <img src={house.images[0]} alt="Property" className="w-full h-40 object-cover rounded-lg mb-2" />
-            )}
-            <div className="flex justify-between items-start">
-              <h3 className="font-semibold text-lg">{house.address}</h3>
-              <button onClick={() => toggleFavorite(house.id)} className="text-red-500">
-                {favorites.includes(house.id) ? <Heart fill="red" size={18} /> : <Heart size={18} />}
-              </button>
-            </div>
-            <p className="text-green-700 font-bold mt-1">KSh {house.price?.toLocaleString()}</p>
-            <p className="text-sm text-gray-600">{house.bedrooms} beds / {house.bathrooms} baths</p>
-            <p className="text-sm text-gray-500 mt-2 line-clamp-2">{house.description}</p>
-            <p className="text-xs text-gray-400 mt-2">Listed by: {house.agentName}</p>
-            <button onClick={() => setSelectedHouse(house)} className="mt-3 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2">
-              <DollarSign size={18} /> Buy Now
-            </button>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-green-100 flex items-center gap-4">
+          <div className="bg-green-100 p-3 rounded-full">
+            <Home className="text-green-700" size={24} />
           </div>
-        ))}
-        {filtered.length === 0 && <div className="col-span-full text-center py-8 text-gray-500">No houses available for purchase.</div>}
+          <div>
+            <p className="text-sm text-gray-500">Available Properties</p>
+            <p className="text-2xl font-bold text-gray-800">{houses.length}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-green-100 flex items-center gap-4">
+          <div className="bg-green-100 p-3 rounded-full">
+            <Heart className="text-green-700" size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Your Favorites</p>
+            <p className="text-2xl font-bold text-gray-800">{favorites.length}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-5 border border-green-100 flex items-center gap-4">
+          <div className="bg-green-100 p-3 rounded-full">
+            <ShoppingBag className="text-green-700" size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Properties Purchased</p>
+            <p className="text-2xl font-bold text-gray-800">{purchasedCount}</p>
+          </div>
+        </div>
       </div>
+
+      {/* Property Grid */}
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-green-100">
+        <h2 className="text-2xl font-bold text-green-800 mb-4">Featured Properties</h2>
+        {filteredHouses.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <Home size={48} className="mx-auto text-gray-300 mb-3" />
+            <p>No properties match your search.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredHouses.map(house => (
+              <div key={house.id} className="border border-green-200 rounded-xl overflow-hidden hover:shadow-lg transition">
+                {house.images && house.images.length > 0 ? (
+                  <img src={house.images[0]} alt={house.address} className="w-full h-48 object-cover" />
+                ) : (
+                  <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+                    <Home size={48} className="text-gray-400" />
+                  </div>
+                )}
+                <div className="p-4">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-lg text-gray-800">{house.address}</h3>
+                    <button onClick={() => toggleFavorite(house.id)} className="text-red-500">
+                      {favorites.includes(house.id) ? <Heart fill="red" size={20} /> : <Heart size={20} />}
+                    </button>
+                  </div>
+                  <p className="text-green-700 font-bold text-xl mt-1">KSh {house.price?.toLocaleString()}</p>
+                  <div className="flex gap-2 text-sm text-gray-500 mt-2">
+                    <span>{house.bedrooms} beds</span> • <span>{house.bathrooms} baths</span>
+                  </div>
+                  <p className="text-gray-600 text-sm mt-2 line-clamp-2">{house.description}</p>
+                  <p className="text-xs text-gray-400 mt-2">Listed by: {house.agentName}</p>
+                  <button
+                    onClick={() => setSelectedHouse(house)}
+                    className="mt-4 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition"
+                  >
+                    Buy Now
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {selectedHouse && (
         <PaymentModal house={selectedHouse} onClose={() => setSelectedHouse(null)} onSuccess={handlePaymentSuccess} />
       )}
