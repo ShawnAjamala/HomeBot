@@ -1,17 +1,42 @@
-# React + Vite
+# HomeBot – AI Real Estate Assistant
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Live Demo:**  https://home-bot-two.vercel.app/
+**GitHub Repository:** https://github.com/ShawnAjamala/HomeBot
 
-Currently, two official plugins are available:
+HomeBot is a role‑based real estate platform for buyers, agents, and administrators.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## How to Use
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Buyer** – Browse properties, save favorites, purchase with M‑Pesa simulation, view purchase history.
+- **Agent** – Add listings with images, edit/delete, see earnings and payment notifications.
+- **Admin** – Approve agents and properties, manage users, view commission reports.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-# HomeBot
+## Key Features
+
+- Role‑specific dashboards
+- Property image upload (Cloudinary)
+- Agent & property approval workflow
+- Simulated M‑Pesa payment (5% admin commission)
+- Favorites, purchase history, finance history
+- Profile management (name, bio, avatar)
+- Firebase Authentication & Firestore
+- Responsive design with Tailwind CSS
+
+---
+
+## Tech Stack
+
+React, Vite, Tailwind CSS, Firebase, Cloudinary, Lucide React
+
+---
+
+## Setup (quick)
+
+1. Clone the repo  
+2. Run `npm install`  
+3. Configure Firebase and Cloudinary with your credentials 
+4. Run `npm run dev`
