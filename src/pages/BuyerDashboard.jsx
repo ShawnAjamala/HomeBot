@@ -1,3 +1,11 @@
+/**
+ * BuyerDashboard – Main view for authenticated buyers
+ * 
+ * Displays approved, unsold properties with search, favorite toggle, and purchase modal.
+ * Shows statistics: available properties, user's favorites count, and purchased count.
+ * Uses useToast for success messages (e.g., after payment).
+ */
+
 import { useState, useEffect } from "react";
 import { auth, db } from "../firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -6,66 +14,86 @@ import { Search, Heart, Home, ShoppingBag } from "lucide-react";
 import { useToast } from "../components/NotificationManager";
 
 export default function BuyerDashboard() {
-  const [houses, setHouses] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [favorites, setFavorites] = useState([]);
-  const [selectedHouse, setSelectedHouse] = useState(null);
-  const [purchasedCount, setPurchasedCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const toast = useToast();
+  // --- State variables ---
+  const [houses, setHouses] = useState([]);           // List of available properties
+  const [searchTerm, setSearchTerm] = useState("");   // Search filter (address/description)
+  const [favorites, setFavorites] = useState([]);     // Array of house IDs the user favorited
+  const [selectedHouse, setSelectedHouse] = useState(null); // House being purchased (opens modal)
+  const [purchasedCount, setPurchasedCount] = useState(0);   // Number of properties already bought
+  const [loading, setLoading] = useState(true);       // Loading state while fetching data
+  const toast = useToast();                            // Toast notification function
 
+  // --- Fetch data on component mount ---
   useEffect(() => {
     const fetchData = async () => {
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user) return; // No logged-in user – should not happen because route is protected
 
-      const q = query(collection(db, "houses"), where("approved", "==", true), where("sold", "==", false));
+      // 1. Fetch approved, unsold houses
+      const q = query(
+        collection(db, "houses"),
+        where("approved", "==", true),
+        where("sold", "==", false)
+      );
       const snapshot = await getDocs(q);
       const housesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setHouses(housesData);
 
+      // 2. Load favorites from localStorage (simple per‑device storage)
       const favs = JSON.parse(localStorage.getItem(`favorites_${user.uid}`) || "[]");
       setFavorites(favs);
 
-      const purchasesQuery = query(collection(db, "transactions"), where("buyerId", "==", user.uid));
+      // 3. Count purchased properties (transactions where user is buyer)
+      const purchasesQuery = query(
+        collection(db, "transactions"),
+        where("buyerId", "==", user.uid)
+      );
       const purchasesSnap = await getDocs(purchasesQuery);
       setPurchasedCount(purchasesSnap.size);
 
       setLoading(false);
     };
     fetchData();
-  }, []);
+  }, []); // Empty dependency array → runs once when component mounts
 
+  // --- Toggle favorite status for a property ---
   const toggleFavorite = (houseId) => {
     const user = auth.currentUser;
     if (!user) return;
     let newFavs;
     if (favorites.includes(houseId)) {
+      // Remove from favorites
       newFavs = favorites.filter(id => id !== houseId);
     } else {
+      // Add to favorites
       newFavs = [...favorites, houseId];
     }
     setFavorites(newFavs);
     localStorage.setItem(`favorites_${user.uid}`, JSON.stringify(newFavs));
   };
 
+  // --- Callback after successful payment (from PaymentModal) ---
   const handlePaymentSuccess = () => {
-    setSelectedHouse(null);
+    setSelectedHouse(null); // Close modal
+    // Remove the purchased house from the displayed list
     setHouses(prev => prev.filter(h => h.id !== selectedHouse?.id));
-    setPurchasedCount(prev => prev + 1);
+    setPurchasedCount(prev => prev + 1); // Increment purchase count
     toast("Payment successful! The house is now yours.");
   };
 
+  // --- Filter houses based on search term ---
   const filteredHouses = houses.filter(h =>
     h.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     h.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // --- Loading indicator while data is being fetched ---
   if (loading) return <div>Loading properties...</div>;
 
+  // --- Render the dashboard UI ---
   return (
     <div className="space-y-8">
-      {/* Hero Section */}
+      {/* Hero Section with Search Bar */}
       <div className="bg-gradient-to-r from-green-600 to-green-800 rounded-2xl p-8 text-white">
         <h1 className="text-3xl font-bold mb-2">Find Your Dream Home</h1>
         <p className="text-green-100 mb-6">Discover the perfect property from our curated listings</p>
@@ -81,7 +109,7 @@ export default function BuyerDashboard() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-sm p-5 border border-green-100 flex items-center gap-4">
           <div className="bg-green-100 p-3 rounded-full"><Home className="text-green-700" size={24} /></div>
@@ -106,6 +134,7 @@ export default function BuyerDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredHouses.map(house => (
               <div key={house.id} className="border border-green-200 rounded-xl overflow-hidden hover:shadow-lg transition">
+                {/* Property image (first one) or placeholder */}
                 {house.images?.[0] ? (
                   <img src={house.images[0]} alt={house.address} className="w-full h-48 object-cover" />
                 ) : (
@@ -124,7 +153,10 @@ export default function BuyerDashboard() {
                   </div>
                   <p className="text-gray-600 text-sm mt-2 line-clamp-2">{house.description}</p>
                   <p className="text-xs text-gray-400 mt-2">Listed by: {house.agentName}</p>
-                  <button onClick={() => setSelectedHouse(house)} className="mt-4 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
+                  <button
+                    onClick={() => setSelectedHouse(house)}
+                    className="mt-4 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition"
+                  >
                     Buy Now
                   </button>
                 </div>
@@ -134,7 +166,14 @@ export default function BuyerDashboard() {
         )}
       </div>
 
-      {selectedHouse && <PaymentModal house={selectedHouse} onClose={() => setSelectedHouse(null)} onSuccess={handlePaymentSuccess} />}
+      {/* Payment Modal (rendered only when a house is selected) */}
+      {selectedHouse && (
+        <PaymentModal
+          house={selectedHouse}
+          onClose={() => setSelectedHouse(null)}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

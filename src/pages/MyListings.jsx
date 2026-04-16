@@ -1,52 +1,85 @@
+/**
+ * MyListings – Agent property management page
+ * 
+ * Allows agents to create, edit, and delete their property listings.
+ * Features:
+ * - Add new property with address, price, bedrooms, bathrooms, description, and multiple images.
+ * - Edit existing listings (pre‑populates form).
+ * - Delete listings with confirmation modal.
+ * - Shows listing approval status and sold status.
+ * - Uses Cloudinary upload widget for image uploads.
+ * - Toast notifications for success/error feedback.
+ * 
+ * Accessible only to agents (route protection in App.jsx).
+ */
+
 import { useState, useEffect } from "react";
 import { auth, db } from "../firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import Navbar from "../components/Navbar";
+// NOTE: The import below has a typo – filename should be "UploadWidget" not "UploadWIdget"
 import UploadWidget from "../components/UploadWIdget";
 import { PlusCircle, Edit2, Trash2, X } from "lucide-react";
 import { useConfirm, useToast } from "../components/NotificationManager";
 
 export default function MyListings() {
-  const [listings, setListings] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editingListing, setEditingListing] = useState(null);
-  const [formData, setFormData] = useState({ address: "", price: "", bedrooms: "", bathrooms: "", description: "", images: [] });
-  const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState(null);
-  const confirm = useConfirm();
-  const toast = useToast();
+  // --- State variables ---
+  const [listings, setListings] = useState([]);           // Array of agent's property listings
+  const [showForm, setShowForm] = useState(false);        // Toggle visibility of add/edit form
+  const [editingListing, setEditingListing] = useState(null); // Listing being edited (null if adding new)
+  const [formData, setFormData] = useState({ 
+    address: "", 
+    price: "", 
+    bedrooms: "", 
+    bathrooms: "", 
+    description: "", 
+    images: [] 
+  });
+  const [loading, setLoading] = useState(true);           // Loading state while fetching listings
+  const [role, setRole] = useState(null);                 // User role (for navbar)
+  const confirm = useConfirm();                            // Confirmation modal hook
+  const toast = useToast();                                // Toast notification hook
 
+  // --- Fetch agent's listings on component mount ---
   useEffect(() => {
     const fetchListings = async () => {
       const user = auth.currentUser;
       if (!user) return;
+      // Query Firestore for houses where agentId matches current user's UID
       const q = query(collection(db, "houses"), where("agentId", "==", user.uid));
       const snapshot = await getDocs(q);
+      // Map documents to objects with id
       setListings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
     };
     fetchListings();
+    // Get user role from localStorage for the navbar
     setRole(localStorage.getItem("userRole"));
-  }, []);
+  }, []); // Empty dependency array → runs once when component mounts
 
+  // --- Add uploaded image URL to formData.images array ---
   const handleImageUpload = (imageUrl) => {
     setFormData(prev => ({ ...prev, images: [...prev.images, imageUrl] }));
   };
 
+  // --- Remove image from formData.images by index ---
   const removeImage = (index) => {
     setFormData(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== index) }));
   };
 
+  // --- Reset form and hide it ---
   const resetForm = () => {
     setShowForm(false);
     setEditingListing(null);
     setFormData({ address: "", price: "", bedrooms: "", bathrooms: "", description: "", images: [] });
   };
 
+  // --- Submit new or updated listing to Firestore ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     const user = auth.currentUser;
     if (!user) return;
+    // Prepare listing data
     const listingData = {
       ...formData,
       price: Number(formData.price),
@@ -54,15 +87,17 @@ export default function MyListings() {
       bathrooms: Number(formData.bathrooms),
       agentId: user.uid,
       agentName: localStorage.getItem("userName") || "Agent",
-      approved: false,
+      approved: false,      // Requires admin approval
       sold: false,
       createdAt: new Date().toISOString()
     };
     if (editingListing) {
+      // Update existing listing
       await updateDoc(doc(db, "houses", editingListing.id), listingData);
       setListings(prev => prev.map(l => l.id === editingListing.id ? { ...l, ...listingData } : l));
       toast("Listing updated successfully");
     } else {
+      // Create new listing
       const docRef = await addDoc(collection(db, "houses"), listingData);
       setListings([...listings, { id: docRef.id, ...listingData }]);
       toast("Listing submitted for approval");
@@ -70,19 +105,24 @@ export default function MyListings() {
     resetForm();
   };
 
+  // --- Delete a listing after confirmation ---
   const deleteListing = async (id) => {
     await deleteDoc(doc(db, "houses", id));
     setListings(prev => prev.filter(l => l.id !== id));
     toast("Listing deleted successfully");
   };
 
+  // --- Loading indicator while fetching listings ---
   if (loading) return <div>Loading...</div>;
 
+  // --- Render the component ---
   return (
     <div>
+      {/* Persistent navbar (role is passed to show correct links) */}
       <Navbar role={role} />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="bg-white rounded-xl shadow-sm p-6 border border-green-100">
+          {/* Header with Add button */}
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold text-green-800">My Listings</h2>
             <button onClick={() => setShowForm(true)} className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
@@ -90,6 +130,7 @@ export default function MyListings() {
             </button>
           </div>
 
+          {/* Add/Edit Form (conditionally rendered) */}
           {showForm && (
             <div className="bg-gray-50 p-4 rounded-lg mb-6">
               <h3 className="font-semibold mb-3">{editingListing ? "Edit Listing" : "Add New Listing"}</h3>
@@ -101,6 +142,7 @@ export default function MyListings() {
                 <textarea placeholder="Description" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows="3" className="w-full p-2 border rounded" />
                 <div>
                   <label className="block text-sm font-medium mb-1">Property Images</label>
+                  {/* Preview uploaded images with remove buttons */}
                   <div className="flex flex-wrap gap-2 mb-2">
                     {formData.images.map((img, idx) => (
                       <div key={idx} className="relative w-20 h-20">
@@ -109,6 +151,7 @@ export default function MyListings() {
                       </div>
                     ))}
                   </div>
+                  {/* Cloudinary upload widget */}
                   <UploadWidget cloudName="dqxemsd9j" uploadPreset="homebot_123" onUpload={handleImageUpload} buttonText="Upload Image" multiple={true} />
                 </div>
                 <div className="flex gap-2 pt-2">
@@ -119,16 +162,20 @@ export default function MyListings() {
             </div>
           )}
 
+          {/* Grid of existing listings */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {listings.map(listing => (
               <div key={listing.id} className="border border-green-200 rounded-lg p-4">
+                {/* Display first image if available */}
                 {listing.images?.[0] && <img src={listing.images[0]} alt="Property" className="w-full h-40 object-cover rounded-lg mb-2" />}
                 <h3 className="font-bold text-lg">{listing.address}</h3>
                 <p className="text-green-700 font-semibold">KSh {listing.price?.toLocaleString()}</p>
                 <p className="text-sm text-gray-600">{listing.bedrooms} beds / {listing.bathrooms} baths</p>
                 <p className="text-sm text-gray-500 mt-2 line-clamp-2">{listing.description}</p>
                 <div className="flex gap-2 mt-3">
+                  {/* Edit button – pre‑populates form */}
                   <button onClick={() => { setEditingListing(listing); setFormData(listing); setShowForm(true); }} className="text-blue-600"><Edit2 size={18} /></button>
+                  {/* Delete button – uses confirmation modal */}
                   <button onClick={() => confirm("Delete Listing", "Are you sure you want to delete this property?", () => deleteListing(listing.id))} className="text-red-600"><Trash2 size={18} /></button>
                 </div>
                 <p className="text-xs mt-2">{listing.approved ? <span className="text-green-600">Approved</span> : <span className="text-yellow-600">Pending Approval</span>}</p>

@@ -1,20 +1,33 @@
+/**
+ * AdminDashboard – Pending approvals
+ * 
+ * Displays two tabs: pending agents and pending houses.
+ * Admin can approve agents (sets approved: true in Firestore) or approve houses.
+ * Uses useToast and useConfirm for user feedback.
+ */
+
 import { useState, useEffect } from "react";
 import { db } from "../firebase";
 import { collection, getDocs, doc, updateDoc, query, where } from "firebase/firestore";
-import { Check, X, Home, Users } from "lucide-react";
+import { Check, Home, Users } from "lucide-react";
+import { useToast, useConfirm } from "../components/NotificationManager";
 
 export default function AdminDashboard() {
   const [pendingAgents, setPendingAgents] = useState([]);
   const [pendingHouses, setPendingHouses] = useState([]);
   const [activeTab, setActiveTab] = useState("agents");
   const [loading, setLoading] = useState(true);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
     const fetchData = async () => {
+      // Fetch unapproved agents
       const agentsQuery = query(collection(db, "users"), where("role", "==", "agent"), where("approved", "==", false));
       const agentsSnap = await getDocs(agentsQuery);
       setPendingAgents(agentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
+      // Fetch unapproved houses
       const housesQuery = query(collection(db, "houses"), where("approved", "==", false));
       const housesSnap = await getDocs(housesQuery);
       setPendingHouses(housesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -27,11 +40,13 @@ export default function AdminDashboard() {
   const approveAgent = async (agentId) => {
     await updateDoc(doc(db, "users", agentId), { approved: true });
     setPendingAgents(prev => prev.filter(a => a.id !== agentId));
+    toast("Agent approved successfully");
   };
 
   const approveHouse = async (houseId) => {
     await updateDoc(doc(db, "houses", houseId), { approved: true });
     setPendingHouses(prev => prev.filter(h => h.id !== houseId));
+    toast("Property approved");
   };
 
   if (loading) return <div>Loading...</div>;
