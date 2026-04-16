@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { auth, db } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -7,6 +7,8 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import ManageUsers from "./pages/ManageUsers";
 import ManageProperties from "./pages/ManageProperties";
+import Search from "./pages/Search";
+import Favorites from "./pages/Favorites";
 
 
 function App() {
@@ -39,6 +41,7 @@ function App() {
         setRole(null);
         localStorage.removeItem("userName");
         localStorage.removeItem("userRole");
+        localStorage.removeItem("userAvatar");
       }
       setAuthChecked(true);
     });
@@ -55,6 +58,8 @@ function App() {
         <Route path="/profile" element={user ? <Profile /> : <Navigate to="/auth" />} />
         <Route path="/manage-users" element={user && role === "admin" ? <ManageUsers /> : <Navigate to="/dashboard" />} />
         <Route path="/manage-properties" element={user && role === "admin" ? <ManageProperties /> : <Navigate to="/dashboard" />} />
+        <Route path="/search" element={user ? <Search /> : <Navigate to="/auth" />} />
+        <Route path="/favorites" element={user ? <Favorites /> : <Navigate to="/auth" />} />
        
         <Route path="*" element={<Navigate to="/dashboard" />} />
       </Routes>

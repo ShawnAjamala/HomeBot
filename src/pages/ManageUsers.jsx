@@ -1,36 +1,43 @@
 import { useState, useEffect } from "react";
-import { Check, Trash2 } from "lucide-react";
+import { db } from "../firebase";
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, where } from "firebase/firestore";
 import Navbar from "../components/Navbar";
+import { Check, Trash2 } from "lucide-react";
 
 export default function ManageUsers() {
   const [users, setUsers] = useState([]);
-  const [role, setRole] = useState("admin");
+  const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState(null);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("homebot_users") || "[]");
-    setUsers(stored.filter(u => u.role === "buyer" || u.role === "agent"));
-    const userRole = localStorage.getItem("userRole");
-    if (userRole) setRole(userRole);
+    const fetchUsers = async () => {
+      const snapshot = await getDocs(collection(db, "users"));
+      const allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const filtered = allUsers.filter(u => u.role === "buyer" || u.role === "agent");
+      setUsers(filtered);
+      setLoading(false);
+    };
+    fetchUsers();
+    setRole(localStorage.getItem("userRole"));
   }, []);
 
-  const approveAgent = (userId) => {
-    const allUsers = JSON.parse(localStorage.getItem("homebot_users") || "[]");
-    const updated = allUsers.map(u => u.id === userId ? { ...u, approved: true } : u);
-    localStorage.setItem("homebot_users", JSON.stringify(updated));
+  const approveAgent = async (userId) => {
+    await updateDoc(doc(db, "users", userId), { approved: true });
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, approved: true } : u));
   };
 
-  const deleteUser = (userId) => {
-    if (window.confirm("Delete this user? Their properties will also be deleted.")) {
-      let allUsers = JSON.parse(localStorage.getItem("homebot_users") || "[]");
-      allUsers = allUsers.filter(u => u.id !== userId);
-      localStorage.setItem("homebot_users", JSON.stringify(allUsers));
-      let allProps = JSON.parse(localStorage.getItem("homebot_properties") || "[]");
-      allProps = allProps.filter(p => p.agentId !== userId);
-      localStorage.setItem("homebot_properties", JSON.stringify(allProps));
+  const deleteUser = async (userId) => {
+    if (window.confirm("Delete this user? This will also remove their properties.")) {
+      await deleteDoc(doc(db, "users", userId));
+      const propsSnap = await getDocs(query(collection(db, "houses"), where("agentId", "==", userId)));
+      for (const prop of propsSnap.docs) {
+        await deleteDoc(doc(db, "houses", prop.id));
+      }
       setUsers(prev => prev.filter(u => u.id !== userId));
     }
   };
+
+  if (loading) return <div>Loading users...</div>;
 
   return (
     <div>
@@ -41,7 +48,7 @@ export default function ManageUsers() {
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th></tr>
+                <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
               </thead>
               <tbody>
                 {users.map(u => (
@@ -49,14 +56,13 @@ export default function ManageUsers() {
                     <td className="px-6 py-4">{u.name}</td>
                     <td className="px-6 py-4">{u.email}</td>
                     <td className="px-6 py-4 capitalize">{u.role}</td>
-                    <td className="px-6 py-4">{u.role === "agent" ? (u.approved ? <span className="text-green-600">Approved</span> : <span className="text-yellow-600">Pending</span>) : <span className="text-gray-500">N/A</span>}</td>
-                    <td className="px-6 py-4 flex gap-2">
+                    <td>{u.role === "agent" ? (u.approved ? "Approved" : "Pending") : "N/A"}</td>
+                    <td className="flex gap-2">
                       {u.role === "agent" && !u.approved && <button onClick={() => approveAgent(u.id)} className="text-green-600"><Check size={18} /></button>}
                       <button onClick={() => deleteUser(u.id)} className="text-red-600"><Trash2 size={18} /></button>
                     </td>
                   </tr>
                 ))}
-                {users.length === 0 && <tr><td colSpan="5" className="text-center py-4 text-gray-500">No buyers or agents found</td></tr>}
               </tbody>
             </table>
           </div>

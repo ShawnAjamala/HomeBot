@@ -11,12 +11,10 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch unapproved agents
       const agentsQuery = query(collection(db, "users"), where("role", "==", "agent"), where("approved", "==", false));
       const agentsSnap = await getDocs(agentsQuery);
       setPendingAgents(agentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
 
-      // Fetch unapproved houses
       const housesQuery = query(collection(db, "houses"), where("approved", "==", false));
       const housesSnap = await getDocs(housesQuery);
       setPendingHouses(housesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -31,16 +29,8 @@ export default function AdminDashboard() {
     setPendingAgents(prev => prev.filter(a => a.id !== agentId));
   };
 
-  const rejectAgent = async (agentId) => {
-    setPendingAgents(prev => prev.filter(a => a.id !== agentId));
-  };
-
   const approveHouse = async (houseId) => {
     await updateDoc(doc(db, "houses", houseId), { approved: true });
-    setPendingHouses(prev => prev.filter(h => h.id !== houseId));
-  };
-
-  const rejectHouse = async (houseId) => {
     setPendingHouses(prev => prev.filter(h => h.id !== houseId));
   };
 
@@ -69,10 +59,9 @@ export default function AdminDashboard() {
                   <p className="font-semibold">{agent.name}</p>
                   <p className="text-sm text-gray-600">{agent.email}</p>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => approveAgent(agent.id)} className="bg-green-600 text-white px-3 py-1 rounded flex items-center gap-1"><Check size={16} /> Approve</button>
-                  <button onClick={() => rejectAgent(agent.id)} className="bg-red-600 text-white px-3 py-1 rounded flex items-center gap-1"><X size={16} /> Reject</button>
-                </div>
+                <button onClick={() => approveAgent(agent.id)} className="bg-green-600 text-white px-3 py-1 rounded flex items-center gap-1">
+                  <Check size={16} /> Approve
+                </button>
               </div>
             ))
           )}
@@ -85,18 +74,13 @@ export default function AdminDashboard() {
             <p className="text-gray-500">No pending house approvals.</p>
           ) : (
             pendingHouses.map(house => (
-              <div key={house.id} className="border rounded-lg p-4">
-                <div className="flex justify-between">
-                  <div>
-                    <p className="font-semibold">{house.address}</p>
-                    <p className="text-sm text-gray-600">Price: KSh {house.price?.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">Agent: {house.agentName}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => approveHouse(house.id)} className="bg-green-600 text-white px-3 py-1 rounded">Approve</button>
-                    <button onClick={() => rejectHouse(house.id)} className="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
-                  </div>
+              <div key={house.id} className="border rounded-lg p-4 flex justify-between items-center">
+                <div>
+                  <p className="font-semibold">{house.address}</p>
+                  <p className="text-sm text-gray-600">Price: KSh {house.price?.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600">Agent: {house.agentName}</p>
                 </div>
+                <button onClick={() => approveHouse(house.id)} className="bg-green-600 text-white px-3 py-1 rounded">Approve</button>
               </div>
             ))
           )}
