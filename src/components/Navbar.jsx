@@ -54,7 +54,7 @@ export default function Navbar({ role }) {
           {/* Logo / Brand */}
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
             <Home className="text-green-700" size={24} />
-            <span className="text-xl font-bold text-green-800">HomeBot</span>
+            <span className="text-xl font-bold text-green-800">HomeSphere</span>
           </div>
 
           {/* Desktop Navigation (hidden on mobile) */}

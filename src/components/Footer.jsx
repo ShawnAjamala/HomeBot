@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-sm">
-            &copy; {new Date().getFullYear()} HomeBot. All rights reserved.
+            &copy; {new Date().getFullYear()} HomeSphere. All rights reserved.
           </div>
           <div className="flex gap-6 text-sm">
             <a

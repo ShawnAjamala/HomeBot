@@ -1,96 +1,158 @@
 /**
  * BuyerDashboard – Main view for authenticated buyers
  * 
- * Displays approved, unsold properties with search, favorite toggle, and purchase modal.
- * Shows statistics: available properties, user's favorites count, and purchased count.
- * Uses useToast for success messages (e.g., after payment).
+ * Uses inline custom hooks for:
+ * - Fetching approved, unsold properties (with listing type filter)
+ * - Managing favorites (localStorage)
+ * - Fetching purchase count
+ * - Search term state
+ * 
+ * Displays property grid with images, details, favorite toggle, and purchase modal.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { auth, db } from "../firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import PaymentModal from "../components/PaymentModal";
 import { Search, Heart, Home, ShoppingBag } from "lucide-react";
 import { useToast } from "../components/NotificationManager";
 
-export default function BuyerDashboard() {
-  // --- State variables ---
-  const [houses, setHouses] = useState([]);           // List of available properties
-  const [searchTerm, setSearchTerm] = useState("");   // Search filter (address/description)
-  const [favorites, setFavorites] = useState([]);     // Array of house IDs the user favorited
-  const [selectedHouse, setSelectedHouse] = useState(null); // House being purchased (opens modal)
-  const [purchasedCount, setPurchasedCount] = useState(0);   // Number of properties already bought
-  const [loading, setLoading] = useState(true);       // Loading state while fetching data
-  const toast = useToast();                            // Toast notification function
+// ==================== Custom Hooks (inline) ====================
 
-  // --- Fetch data on component mount ---
-  useEffect(() => {
-    const fetchData = async () => {
-      const user = auth.currentUser;
-      if (!user) return; // No logged-in user – should not happen because route is protected
+/**
+ * useAvailableHouses – Fetch approved, unsold properties
+ * @param {string|null} listingTypeFilter - "sale", "rental", "airbnb", or null for all
+ * Returns { houses, loading, error, refetch }
+ */
+const useAvailableHouses = (listingTypeFilter = null) => {
+  const [houses, setHouses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-      // 1. Fetch approved, unsold houses
-      const q = query(
-        collection(db, "houses"),
+  const fetchHouses = useCallback(async () => {
+    setLoading(true);
+    try {
+      let constraints = [
         where("approved", "==", true),
         where("sold", "==", false)
-      );
+      ];
+      if (listingTypeFilter) {
+        constraints.push(where("listingType", "==", listingTypeFilter));
+      }
+      const q = query(collection(db, "houses"), ...constraints);
       const snapshot = await getDocs(q);
-      const housesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setHouses(housesData);
-
-      // 2. Load favorites from localStorage (simple per‑device storage)
-      const favs = JSON.parse(localStorage.getItem(`favorites_${user.uid}`) || "[]");
-      setFavorites(favs);
-
-      // 3. Count purchased properties (transactions where user is buyer)
-      const purchasesQuery = query(
-        collection(db, "transactions"),
-        where("buyerId", "==", user.uid)
-      );
-      const purchasesSnap = await getDocs(purchasesQuery);
-      setPurchasedCount(purchasesSnap.size);
-
+      setHouses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setLoading(false);
-    };
-    fetchData();
-  }, []); // Empty dependency array → runs once when component mounts
+    }
+  }, [listingTypeFilter]);
 
-  // --- Toggle favorite status for a property ---
-  const toggleFavorite = (houseId) => {
+  useEffect(() => {
+    fetchHouses();
+  }, [fetchHouses]);
+
+  return { houses, loading, error, refetch: fetchHouses };
+};
+
+/**
+ * useFavorites – Manage user favorites in localStorage
+ * Returns { favorites, toggleFavorite, isFavorite, loading }
+ */
+const useFavorites = () => {
+  const [favorites, setFavorites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const userId = auth.currentUser?.uid;
+
+  useEffect(() => {
+    if (userId) {
+      const stored = localStorage.getItem(`favorites_${userId}`);
+      setFavorites(stored ? JSON.parse(stored) : []);
+    }
+    setLoading(false);
+  }, [userId]);
+
+  const toggleFavorite = useCallback((houseId) => {
+    setFavorites(prev => {
+      const newFavs = prev.includes(houseId)
+        ? prev.filter(id => id !== houseId)
+        : [...prev, houseId];
+      localStorage.setItem(`favorites_${userId}`, JSON.stringify(newFavs));
+      return newFavs;
+    });
+  }, [userId]);
+
+  const isFavorite = useCallback((houseId) => favorites.includes(houseId), [favorites]);
+
+  return { favorites, toggleFavorite, isFavorite, loading };
+};
+
+/**
+ * usePurchasedCount – Fetch number of properties bought by the current user
+ * Returns { purchasedCount, loading, error }
+ */
+const usePurchasedCount = () => {
+  const [purchasedCount, setPurchasedCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchCount = useCallback(async () => {
     const user = auth.currentUser;
     if (!user) return;
-    let newFavs;
-    if (favorites.includes(houseId)) {
-      // Remove from favorites
-      newFavs = favorites.filter(id => id !== houseId);
-    } else {
-      // Add to favorites
-      newFavs = [...favorites, houseId];
+    setLoading(true);
+    try {
+      const q = query(collection(db, "transactions"), where("buyerId", "==", user.uid));
+      const snapshot = await getDocs(q);
+      setPurchasedCount(snapshot.size);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-    setFavorites(newFavs);
-    localStorage.setItem(`favorites_${user.uid}`, JSON.stringify(newFavs));
-  };
+  }, []);
 
-  // --- Callback after successful payment (from PaymentModal) ---
+  useEffect(() => {
+    fetchCount();
+  }, [fetchCount]);
+
+  return { purchasedCount, loading, error, refetch: fetchCount };
+};
+
+// ==================== Main Component ====================
+
+export default function BuyerDashboard() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [listingTypeFilter, setListingTypeFilter] = useState("all");
+  const [selectedHouse, setSelectedHouse] = useState(null);
+  const toast = useToast();
+
+  // Use custom hooks
+  const { houses, loading: housesLoading } = useAvailableHouses(
+    listingTypeFilter === "all" ? null : listingTypeFilter
+  );
+  const { favorites, toggleFavorite } = useFavorites();
+  const { purchasedCount } = usePurchasedCount();
+
+  // Filter houses by search term (address or description)
+  const filteredHouses = useMemo(() => {
+    if (!searchTerm.trim()) return houses;
+    const term = searchTerm.toLowerCase();
+    return houses.filter(h =>
+      h.address?.toLowerCase().includes(term) ||
+      h.description?.toLowerCase().includes(term)
+    );
+  }, [houses, searchTerm]);
+
   const handlePaymentSuccess = () => {
-    setSelectedHouse(null); // Close modal
-    // Remove the purchased house from the displayed list
-    setHouses(prev => prev.filter(h => h.id !== selectedHouse?.id));
-    setPurchasedCount(prev => prev + 1); // Increment purchase count
+    setSelectedHouse(null);
     toast("Payment successful! The house is now yours.");
   };
 
-  // --- Filter houses based on search term ---
-  const filteredHouses = houses.filter(h =>
-    h.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    h.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  if (housesLoading) return <div>Loading properties...</div>;
 
-  // --- Loading indicator while data is being fetched ---
-  if (loading) return <div>Loading properties...</div>;
-
-  // --- Render the dashboard UI ---
   return (
     <div className="space-y-8">
       {/* Hero Section with Search Bar */}
@@ -109,19 +171,63 @@ export default function BuyerDashboard() {
         </div>
       </div>
 
+      {/* Listing Type Filter Tabs */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setListingTypeFilter("all")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+            listingTypeFilter === "all"
+              ? "bg-green-700 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setListingTypeFilter("sale")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+            listingTypeFilter === "sale"
+              ? "bg-green-700 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          For Sale
+        </button>
+        <button
+          onClick={() => setListingTypeFilter("rental")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+            listingTypeFilter === "rental"
+              ? "bg-green-700 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          For Rent
+        </button>
+        <button
+          onClick={() => setListingTypeFilter("airbnb")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+            listingTypeFilter === "airbnb"
+              ? "bg-green-700 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+        >
+          Airbnb
+        </button>
+      </div>
+
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl shadow-sm p-5 border border-green-100 flex items-center gap-4">
           <div className="bg-green-100 p-3 rounded-full"><Home className="text-green-700" size={24} /></div>
-          <div><p className="text-sm text-gray-500">Available Properties</p><p className="text-2xl font-bold text-gray-800">{houses.length}</p></div>
+          <div><p className="text-sm text-gray-500">Available Properties</p><p className="text-2xl font-bold">{filteredHouses.length}</p></div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-5 border border-green-100 flex items-center gap-4">
           <div className="bg-green-100 p-3 rounded-full"><Heart className="text-green-700" size={24} /></div>
-          <div><p className="text-sm text-gray-500">Your Favorites</p><p className="text-2xl font-bold text-gray-800">{favorites.length}</p></div>
+          <div><p className="text-sm text-gray-500">Your Favorites</p><p className="text-2xl font-bold">{favorites.length}</p></div>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-5 border border-green-100 flex items-center gap-4">
           <div className="bg-green-100 p-3 rounded-full"><ShoppingBag className="text-green-700" size={24} /></div>
-          <div><p className="text-sm text-gray-500">Properties Purchased</p><p className="text-2xl font-bold text-gray-800">{purchasedCount}</p></div>
+          <div><p className="text-sm text-gray-500">Properties Purchased</p><p className="text-2xl font-bold">{purchasedCount}</p></div>
         </div>
       </div>
 
@@ -142,7 +248,12 @@ export default function BuyerDashboard() {
                 )}
                 <div className="p-4">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-lg text-gray-800">{house.address}</h3>
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-800">{house.address}</h3>
+                      <span className="inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-800">
+                        {house.listingType === "sale" ? "For Sale" : house.listingType === "rental" ? "For Rent" : "Airbnb"}
+                      </span>
+                    </div>
                     <button onClick={() => toggleFavorite(house.id)} className="text-red-500">
                       {favorites.includes(house.id) ? <Heart fill="red" size={20} /> : <Heart size={20} />}
                     </button>
@@ -166,7 +277,7 @@ export default function BuyerDashboard() {
         )}
       </div>
 
-      {/* Payment Modal (rendered only when a house is selected) */}
+      {/* Payment Modal */}
       {selectedHouse && (
         <PaymentModal
           house={selectedHouse}

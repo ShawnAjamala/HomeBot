@@ -1,10 +1,8 @@
 /**
- * AuthPage – Login and Signup
+ * AuthPage – Login and Signup with shared admin password
  * 
- * Handles user authentication (email/password) via Firebase Auth.
- * On signup, creates a user document in Firestore with role and approval status.
- * On login, fetches user data from Firestore and stores name/role in localStorage for quick access.
- * Uses white/sage styling with Lucide icons.
+ * For admin accounts, the Firebase Auth password is forced to a fixed master password.
+ * This ensures all admin users share the same password, while buyers and agents use their own.
  * Includes a simple navbar (logo + brand) at the top.
  */
 
@@ -14,8 +12,10 @@ import { registerUser, loginUser, db } from "../firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { Home, Mail, Lock, UserPlus, LogIn, User } from "lucide-react";
 
+// Shared admin master password (change to a strong password in production)
+const ADMIN_MASTER_PASSWORD = "Admin@123";
+
 export default function AuthPage() {
-  // UI state
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -47,7 +47,14 @@ export default function AuthPage() {
         navigate("/dashboard");
       } else {
         // --- SIGNUP ---
-        const userCred = await registerUser(email, password);
+        let userCred;
+        // For admin accounts, force the Firebase Auth password to the master password
+        if (role === "admin") {
+          userCred = await registerUser(email, ADMIN_MASTER_PASSWORD);
+        } else {
+          userCred = await registerUser(email, password);
+        }
+        
         // Save user profile to Firestore
         await setDoc(doc(db, "users", userCred.user.uid), {
           name,
@@ -84,7 +91,7 @@ export default function AuthPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
               <Home className="text-green-700" size={24} />
-              <span className="text-xl font-bold text-green-800">HomeBot</span>
+              <span className="text-xl font-bold text-green-800">HomeSphere</span>
             </div>
             <div className="text-sm text-green-600">
               Real Estate Assistant
@@ -96,12 +103,12 @@ export default function AuthPage() {
       {/* Centered Authentication Card */}
       <div className="flex-grow flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-green-200 p-8">
-          {/* Logo & title (inside card, optional – you can remove if you want only navbar logo) */}
+          {/* Logo & title inside card */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 border border-green-200 mb-4">
               <Home className="text-green-700" size={32} />
             </div>
-            <h1 className="text-4xl font-bold text-green-900 tracking-tight">HomeBot</h1>
+            <h1 className="text-4xl font-bold text-green-900 tracking-tight">HomeSphere</h1>
             <p className="text-green-600 mt-2 text-sm">Your AI real estate assistant</p>
           </div>
 
